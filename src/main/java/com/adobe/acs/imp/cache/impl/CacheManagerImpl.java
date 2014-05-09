@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.adobe.acs.imp.cache.CacheManager;
+import com.adobe.acs.imp.cache.CacheUtil;
 import com.adobe.acs.imp.cache.IMPCache;
 import com.adobe.acs.imp.cache.IMPCache.Entry;
 import com.adobe.acs.imp.cache.data.CachedCampaignInfo;
@@ -26,6 +27,8 @@ import com.adobe.acs.imp.cache.data.CachedTrafficData;
 import com.adobe.acs.imp.core.constants.AnalyticsJcrConstants;
 import com.adobe.acs.imp.core.constants.CampaignCQConstants;
 import com.adobe.acs.imp.core.constants.ResourceTypeConstants;
+import com.day.cq.search.result.Hit;
+
 @Component(label="IMPCache Manager", immediate=true,  metatype = true, description="IMP Cache Manager.")
 @Service
 public class CacheManagerImpl implements CacheManager{
@@ -48,6 +51,8 @@ public class CacheManagerImpl implements CacheManager{
 	
 	private static IMPCache<String, CachedCampaignInfo> cache;
 	
+	private static final String[] additionalProperties = {CampaignCQConstants.CAMPAIGN_ID, CampaignCQConstants.TITLE, CampaignCQConstants.CAMPAIGN_PRODUCT_REFERENCE};
+	
 
 	protected void activate(ComponentContext context)
 	{
@@ -62,12 +67,43 @@ public class CacheManagerImpl implements CacheManager{
 		log.debug(cache.size() + " campaigns' traffic data is cached.");
 	}
 
+	private void addAdditionalPropertites()  {
+		List<Hit> hits = CacheUtil.getAllCampaignsByQuery(adminSession,additionalProperties);
+		if (hits == null) {
+			return;
+		}
+		log.debug("Begin to add additional Properties.");
+		try {
+			for (Hit hit : hits) {
+				String campaigId =  hit.getProperties().get(CampaignCQConstants.CAMPAIGN_ID, "");
+				if (campaigId.isEmpty())
+					continue;
+				CachedCampaignInfo data = cache.get(campaigId);
+				if ( data == null) {
+					continue;
+				}
+				String campaigName = hit.getProperties().get(CampaignCQConstants.TITLE, "");
+				String prductRefer = hit.getProperties().get(CampaignCQConstants.CAMPAIGN_PRODUCT_REFERENCE, "").intern();
+				
+				if (campaigName.isEmpty() || prductRefer.isEmpty() ) {
+					continue;
+				}
+				
+				data.setCampaignName(campaigName);
+				data.setProductReference(prductRefer);
+			}
+		} catch (RepositoryException e) {
+			log.error("", e);
+		}
+		log.debug("End to add additional Properties.");
+	}
+
 	private void loadData2Cache() {
 		try {
 			adminSession = slingRepository.loginAdministrative(null);
 			Node reportNode = adminSession.getNode(AnalyticsJcrConstants.CAMPAIGN_TRAFFIC_ANALYTICS_PATH);
 			createCacheFromNode(reportNode);
-			
+			addAdditionalPropertites();
 		} catch (RepositoryException e) {
 			log.error("",e);
 		} catch (Exception e) {
@@ -121,7 +157,6 @@ public class CacheManagerImpl implements CacheManager{
 		while (iter.hasNext()) {
 			createCacheFromNode(iter.nextNode());
 		}
-		
 	}
 
 	private void addTrafficData(CachedCampaignInfo campaign, Node reportNode) {
@@ -186,6 +221,8 @@ public class CacheManagerImpl implements CacheManager{
 				return null;
 			}
 			CachedCampaignInfo campaign = new CachedCampaignInfo();
+			campaign.setFocus(campaignAnalyticsNode.getProperty(AnalyticsJcrConstants.FOCUS).getString().intern());
+			campaign.setLocale(campaignAnalyticsNode.getProperty(AnalyticsJcrConstants.LOCALE).getString().intern());
 			addTrafficData(campaign, campaignAnalyticsNode.getNode(AnalyticsJcrConstants.ANALYTICS_CAMPAIGN));
 			return campaign;
 		} catch (RepositoryException e) {
@@ -199,14 +236,10 @@ public class CacheManagerImpl implements CacheManager{
 		if (cache != null) {
 			cache.releaseIterator();
 		}
-		
 	}
 
 	@Override
 	public Iterator<Entry<String, CachedCampaignInfo>> getCacheIterator() {
 		return cache.iterator();
 	}
-
-	
-
 }

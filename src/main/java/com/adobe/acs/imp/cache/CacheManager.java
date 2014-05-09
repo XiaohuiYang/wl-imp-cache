@@ -12,7 +12,6 @@ import com.adobe.acs.imp.cache.data.CachedCampaignInfo;
  * This is one way sync mechanism (only sync repository change to cache). 
  * NOTE: When using iterator, please call {@code releaseIterator()} after
  * iterating. And Also does not support {@code iterator.remove()} method.
- * @param <K>
  */
 public interface CacheManager{
 	

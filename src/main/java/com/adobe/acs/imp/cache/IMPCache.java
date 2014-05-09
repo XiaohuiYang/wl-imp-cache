@@ -15,8 +15,7 @@ public interface IMPCache<K,V> extends Iterable<Entry<K, V>>{
 	void releaseIterator();
 	
 	public static abstract class Entry<K,V> {
-
 		public abstract V getValue();
-		
+		public abstract K getKey();
 	}
 }

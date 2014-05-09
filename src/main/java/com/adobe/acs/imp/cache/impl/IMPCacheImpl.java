@@ -34,7 +34,8 @@ public class IMPCacheImpl<K,V> implements IMPCache<K,V>{
 		private V value;
 
 		Entry(K key, E<V> e) {
-			
+			this.k = key;
+			value = e.data;
 		}
 		public K getKey() {
 			return k;
@@ -155,6 +156,19 @@ public class IMPCacheImpl<K,V> implements IMPCache<K,V>{
 
 	@Override
 	public Iterator<com.adobe.acs.imp.cache.IMPCache.Entry<K, V>> iterator() {
+		int time = 0;
+		while (isIterating.get()) {
+			try {
+				if (time > 100) {
+					isIterating.set(false);
+					log.warn("Cache is in iterateing for more than 10s. Another Cache Iterator thread enters anyway.");
+				}
+				time++;
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				//do nothing;
+			}
+		}
 		if (segments == null || segments.length == 0) {
 			return null;
 		}
@@ -176,7 +190,8 @@ public class IMPCacheImpl<K,V> implements IMPCache<K,V>{
 				count++;
 				while (currentIter.hasNext() || segmentIndex < segments.length) {
 					if (currentIter.hasNext()) {
-						return new Entry<K, V>(currentIter.next().getKey(),currentIter.next().getValue());
+						java.util.Map.Entry<K, E<V>> item = currentIter.next();
+						return new Entry<K, V>(item.getKey(),item.getValue());
 					}
 					else {
 						currentIter = segments[segmentIndex].entrySet().iterator();
