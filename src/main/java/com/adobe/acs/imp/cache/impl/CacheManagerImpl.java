@@ -76,21 +76,11 @@ public class CacheManagerImpl implements CacheManager{
 		try {
 			for (Hit hit : hits) {
 				String campaigId =  hit.getProperties().get(CampaignCQConstants.CAMPAIGN_ID, "");
+				log.debug("adding addintional property for campaign:" + campaigId);
 				if (campaigId.isEmpty())
 					continue;
 				CachedCampaignInfo data = cache.get(campaigId);
-				if ( data == null) {
-					continue;
-				}
-				String campaigName = hit.getProperties().get(CampaignCQConstants.TITLE, "");
-				String prductRefer = hit.getProperties().get(CampaignCQConstants.CAMPAIGN_PRODUCT_REFERENCE, "").intern();
-				
-				if (campaigName.isEmpty() || prductRefer.isEmpty() ) {
-					continue;
-				}
-				
-				data.setCampaignName(campaigName);
-				data.setProductReference(prductRefer);
+				updateProperties(hit, data);
 			}
 		} catch (RepositoryException e) {
 			log.error("", e);
@@ -132,13 +122,15 @@ public class CacheManagerImpl implements CacheManager{
 					return;
 				}
 				List<CachedTrafficData> reports = data.getTrafficCampaignReport();
-				if (reports.size() > 0 )
+				if (reports.size() > 0 ) {
 					cache.put(campaignId, data, data.getSize());
+					log.debug(campaignId + " is added to cache with size :" + data.getTrafficCampaignReport().size());
+				}
 				return;
 			}
 		} catch (PathNotFoundException e) {
 			try {
-				log.debug("No sling:resourceType found on node: " + reportNode.getPath());
+				log.trace("No sling:resourceType found on node: " + reportNode.getPath());
 			} catch (RepositoryException e1) {
 				log.error("",e);
 			}
@@ -174,7 +166,7 @@ public class CacheManagerImpl implements CacheManager{
 			}
 		} catch(PathNotFoundException e) {
 			try {
-				log.debug("No sling:resourceType found on node: " + reportNode.getPath());
+				log.trace("No sling:resourceType found on node: " + reportNode.getPath());
 			} catch (RepositoryException e1) {
 				log.error("", e);
 			}
@@ -241,5 +233,34 @@ public class CacheManagerImpl implements CacheManager{
 	@Override
 	public Iterator<Entry<String, CachedCampaignInfo>> getCacheIterator() {
 		return cache.iterator();
+	}
+
+	@Override
+	public void addAddtionalToCampaign(String campaignId, CachedCampaignInfo newInfo, Session adminSession) {
+		List<Hit> hits = CacheUtil.queryCampaignInfo(campaignId, adminSession,additionalProperties);
+		if (hits == null || hits.size() == 0) {
+			return;
+		}
+		updateProperties(hits.get(0),newInfo);
+		
+	}
+
+	private void updateProperties(Hit hit, CachedCampaignInfo newInfo) {
+		if ( newInfo == null) {
+			return;
+		}
+		try {
+			String campaigName = hit.getProperties().get(CampaignCQConstants.TITLE, "");
+			String prductRefer = hit.getProperties().get(CampaignCQConstants.CAMPAIGN_PRODUCT_REFERENCE, "").intern();
+			
+			if (campaigName.isEmpty() || prductRefer.isEmpty() ) {
+				return;
+			}
+			
+			newInfo.setCampaignName(campaigName);
+			newInfo.setProductReference(prductRefer);
+		}catch (Exception e) {
+			log.error("Can not update additional properites.", e);
+		}
 	}
 }

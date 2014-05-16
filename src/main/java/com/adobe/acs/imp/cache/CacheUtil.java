@@ -67,4 +67,37 @@ public class CacheUtil {
 		ServiceReference serviceReference = bundleContext.getServiceReference(clazz.getName());
 		return bundleContext.getService(serviceReference);
 	}
+
+
+	public static List<Hit> queryCampaignInfo(String campaignId, Session session, String[] additionalproperties) {
+		try {
+			ResourceResolverFactory factory = (ResourceResolverFactory) getOSGIService(ResourceResolverFactory.class);
+			Map<String,Object> map =  new HashMap<String,Object>();
+			map.put("user.jcr.session", session);
+			return queryCampaignInfo(campaignId, factory.getResourceResolver(map), additionalproperties);
+		} catch (Exception e) {
+			log.error("",e);
+		}
+		return null;
+	}
+
+
+	private static List<Hit> queryCampaignInfo(String campaignId, ResourceResolver resourceResolver, String[] additionalproperties) {
+		QueryBuilder builder = resourceResolver.adaptTo(QueryBuilder.class);
+		log.debug("Begin query campaigns' basic info.");
+		Map<String, String> queryParams = new HashMap<String, String>();
+		queryParams.put("path", "/content/dam/imp/campaigns");
+		queryParams.put("property", "sling:resourceType");
+		queryParams.put("property.value", "imp/components/campaign");
+		queryParams.put("1_property", "campaignId");
+		queryParams.put("1_property.value", campaignId);
+		queryParams.put("properties", combine(additionalproperties));
+		queryParams.put("p.hits", "selective");
+		queryParams.put("p.nodedepth", "1");
+		queryParams.put("p.limit", "-1");
+		Query query = builder.createQuery(PredicateGroup.create(queryParams), resourceResolver.adaptTo(Session.class));
+		List<Hit> list = query.getResult().getHits();
+		log.debug("End query campaigns' basic info." +  list.size());
+		return list;
+	}
 }

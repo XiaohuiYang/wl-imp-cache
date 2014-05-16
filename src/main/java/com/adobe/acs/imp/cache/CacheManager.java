@@ -3,6 +3,7 @@ package com.adobe.acs.imp.cache;
 import java.util.Iterator;
 
 import javax.jcr.Node;
+import javax.jcr.Session;
 
 import com.adobe.acs.imp.cache.IMPCache.Entry;
 import com.adobe.acs.imp.cache.data.CachedCampaignInfo;
@@ -22,4 +23,6 @@ public interface CacheManager{
 	CachedCampaignInfo mapToCachedInfo(Node campaignAnalyticsNode);
 	void releaseIterator();
 	Iterator<Entry<String, CachedCampaignInfo>> getCacheIterator();
+	void addAddtionalToCampaign(String campaignId, CachedCampaignInfo newInfo,
+			Session adminSession);
 }

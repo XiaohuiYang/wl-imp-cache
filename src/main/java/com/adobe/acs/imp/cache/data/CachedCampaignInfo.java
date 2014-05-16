@@ -9,10 +9,10 @@ public class CachedCampaignInfo {
 //	private String status;
 //	private int startDate;
 //	private int endDate;
-	private String campaignName;
-	private String focus;
-	private String productReference;
-	private String locale;
+	private String campaignName = "";
+	private String focus = "";
+	private String productReference = "";
+	private String locale = "";
 	private List<CachedTrafficData> trafficCampaignReport = new CopyOnWriteArrayList<CachedTrafficData>();
 
 	public List<CachedTrafficData> getTrafficCampaignReport() {
